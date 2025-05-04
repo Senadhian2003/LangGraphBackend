@@ -4,9 +4,37 @@ import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { boundModel } from "../llm/model";
 import { tools } from "../llm/tools";
+import { formatToolCall } from "../utils/logging";
 
 // Memory for the lang graph
 import { MemorySaver } from "@langchain/langgraph";
+
+class LoggingToolNode extends ToolNode {
+  private callCount = 0;
+
+  async invoke(state: any, config?: Record<string, unknown>) {
+    const lastMessage = state.messages[state.messages.length - 1] as AIMessage;
+    
+    if (lastMessage.tool_calls) {
+      const toolCalls = lastMessage.tool_calls.map((toolCall: any) => {
+        this.callCount++;
+        return {
+          number: this.callCount,
+          timestamp: new Date().toISOString(),
+          name: toolCall.name,
+          args: toolCall.args,
+        };
+      });
+      
+      // Log the tool calls using the formatToolCall function
+      toolCalls.forEach(call => {
+        console.log(formatToolCall(call.name, call.args, call.number));
+      });
+    }
+    
+    return super.invoke(state, config);
+  }
+}
 
 // Define the function that determines whether to continue or not
 function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
@@ -20,8 +48,6 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
     return "__end__";
   }
 
-
-
 // Define the function that calls the model
 async function callModel(state: typeof MessagesAnnotation.State) {
     const response = await boundModel.invoke(state.messages);
@@ -30,7 +56,7 @@ async function callModel(state: typeof MessagesAnnotation.State) {
     return { messages: [response] };
 }
 
-const toolNode = new ToolNode(tools);
+const toolNode = new LoggingToolNode(tools);
 // Define a new graph
 const workflow = new StateGraph(MessagesAnnotation)
   .addNode("agent", callModel)
@@ -46,4 +72,3 @@ const memory = new MemorySaver();
 export const langGraph = workflow.compile({
   checkpointer: memory,
 });
-

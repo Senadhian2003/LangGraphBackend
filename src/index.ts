@@ -18,7 +18,7 @@ app.post("/chat", async (req: Request, res: Response) => {
   const config = { configurable: { thread_id: "2"}}
   const message = new HumanMessage(query);
   const response = await langGraph.invoke({ messages: [message] }, config);
-  console.log("Response:", response);
+  console.log("Response:", response.messages[response.messages.length - 1].content);
   res.send({
     response: response.messages[response.messages.length - 1].content,
   });
