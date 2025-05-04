@@ -2,10 +2,11 @@
 import { AIMessage } from "@langchain/core/messages";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
-import { model } from "../llm/model";
+import { boundModel } from "../llm/model";
 import { tools } from "../llm/tools";
 
-
+// Memory for the lang graph
+import { MemorySaver } from "@langchain/langgraph";
 
 // Define the function that determines whether to continue or not
 function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
@@ -23,7 +24,7 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 
 // Define the function that calls the model
 async function callModel(state: typeof MessagesAnnotation.State) {
-    const response = await model.invoke(state.messages);
+    const response = await boundModel.invoke(state.messages);
   
     // We return a list, because this will get added to the existing list
     return { messages: [response] };
@@ -38,5 +39,11 @@ const workflow = new StateGraph(MessagesAnnotation)
   .addEdge("tools", "agent")
   .addConditionalEdges("agent", shouldContinue);
 
-export const langGraph = workflow.compile();
+
+// Add memory to the graph
+const memory = new MemorySaver();
+
+export const langGraph = workflow.compile({
+  checkpointer: memory,
+});
 

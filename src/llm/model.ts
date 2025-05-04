@@ -11,4 +11,6 @@ export const model = new AzureChatOpenAI({
     azureOpenAIApiInstanceName: azureApiInstanceName,
     azureOpenAIApiDeploymentName: azureDeploymentName,
     azureOpenAIApiVersion: azureApiVersion,
-  }).bindTools(tools);
+  })
+
+export const boundModel = model.bindTools(tools);
