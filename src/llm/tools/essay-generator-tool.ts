@@ -10,8 +10,8 @@ const essayGeneratorToolSchema = z.object({
 });
 
 export const essayGeneratorTool = tool(
-  async (content): Promise<string> => {
-    
+  async ({content}): Promise<string> => {
+    console.log("Content:", content);
     const response = await model.invoke([
         new SystemMessage(MARKDOWN_TOOL_PROMPT),
         new HumanMessage(`Create an essay for this content: ${content} `),
