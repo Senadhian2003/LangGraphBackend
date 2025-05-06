@@ -1,5 +1,5 @@
 
-import { AIMessage } from "@langchain/core/messages";
+import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { boundModel } from "../llm/model";
@@ -8,6 +8,7 @@ import { formatToolCall } from "../utils/logging";
 
 // Memory for the lang graph
 import { MemorySaver } from "@langchain/langgraph";
+import { BASE_AGENT_PROMPT } from "../prompts";
 
 class LoggingToolNode extends ToolNode {
   private callCount = 0;
@@ -50,10 +51,13 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
 
 // Define the function that calls the model
 async function callModel(state: typeof MessagesAnnotation.State) {
-    const response = await boundModel.invoke(state.messages);
-  
-    // We return a list, because this will get added to the existing list
-    return { messages: [response] };
+  const systemMessage = new SystemMessage({ content: BASE_AGENT_PROMPT });
+
+  const messagesWithSystem = [systemMessage, ...state.messages];
+
+  const response = await boundModel.invoke(messagesWithSystem);
+
+  return { messages: [response] };
 }
 
 const toolNode = new LoggingToolNode(tools);

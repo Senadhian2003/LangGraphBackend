@@ -12,10 +12,11 @@ app.get("/", (_req: Request, res: Response) => {
 });
 
 app.post("/chat", async (req: Request, res: Response) => {
-  const { query } = req.body;
+  const { query, threadId } = req.body;
 
   console.log("Received message:", query);
-  const config = { configurable: { thread_id: "2"}}
+  console.log("Received threadId:", threadId);
+  const config = { configurable: { thread_id: threadId } };
   const message = new HumanMessage(query);
   const response = await langGraph.invoke({ messages: [message] }, config);
   console.log("Response:", response.messages[response.messages.length - 1].content);

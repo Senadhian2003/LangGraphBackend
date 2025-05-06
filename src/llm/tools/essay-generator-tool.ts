@@ -6,7 +6,7 @@ import { model } from "../model";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { MARKDOWN_TOOL_PROMPT } from "../../prompts";
 const essayGeneratorToolSchema = z.object({
-   content : z.string().describe("The content to be converted to markdown"),
+   content : z.string().describe("The the raw information about the topic that needs to be converted into an essay"),
 });
 
 export const essayGeneratorTool = tool(
@@ -22,8 +22,8 @@ export const essayGeneratorTool = tool(
 
   },
   {
-    name: "markdownTool",
-    description: "Structures the given content into an essay and returns it in markdown format",
+    name: "essayTool",
+    description: "Only use this tool when the user explicitly asks to generate an essay or structured markdown content.",
     schema: essayGeneratorToolSchema,
   }
 );
