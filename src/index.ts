@@ -1,5 +1,5 @@
 import express, { Request, Response } from "express";
-import { langGraph } from "./lang-graph/app";
+import { setupMemory } from "./lang-graph/app";
 import { HumanMessage } from "@langchain/core/messages";
 
 const app = express();
@@ -18,6 +18,7 @@ app.post("/chat", async (req: Request, res: Response) => {
   console.log("Received threadId:", threadId);
   const config = { configurable: { thread_id: threadId } };
   const message = new HumanMessage(query);
+  const langGraph = await setupMemory();
   const response = await langGraph.invoke({ messages: [message] }, config);
   console.log("Response:", response.messages[response.messages.length - 1].content);
   res.send({

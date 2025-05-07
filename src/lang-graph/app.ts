@@ -1,6 +1,7 @@
 
 import { AIMessage, SystemMessage } from "@langchain/core/messages";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 import { boundModel } from "../llm/model";
 import { tools } from "../llm/tools";
@@ -9,6 +10,7 @@ import { formatToolCall } from "../utils/logging";
 // Memory for the lang graph
 import { MemorySaver } from "@langchain/langgraph";
 import { BASE_AGENT_PROMPT } from "../prompts";
+import {pool} from "../pg-sql/pg-connection"
 
 class LoggingToolNode extends ToolNode {
   private callCount = 0;
@@ -70,9 +72,22 @@ const workflow = new StateGraph(MessagesAnnotation)
   .addConditionalEdges("agent", shouldContinue);
 
 
-// Add memory to the graph
-const memory = new MemorySaver();
+// // Add memory to the graph
+// const memory = new MemorySaver();
 
-export const langGraph = workflow.compile({
-  checkpointer: memory,
-});
+export async function setupMemory() {
+  const checkpointer = new PostgresSaver(pool);
+  await checkpointer.setup();
+  const langGraph = workflow.compile({
+    checkpointer: checkpointer,
+  });
+  return langGraph;
+}
+
+
+// const checkpointer = new PostgresSaver(pool);
+// await checkpointer.setup();
+
+// export const langGraph = workflow.compile({
+//   checkpointer: checkpointer,
+// });
