@@ -1,5 +1,5 @@
 import { TavilySearchResults } from "@langchain/community/tools/tavily_search";
-import { tavilyApiKey } from "../../constants/app-constants";
+import { tavilyApiKey } from "../../constants/app-constants.js";
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
 // export const tavilySearchTool =  new TavilySearchResults({ maxResults: 3, apiKey: tavilyApiKey });

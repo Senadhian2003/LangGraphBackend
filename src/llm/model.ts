@@ -1,7 +1,7 @@
 
 import { AzureChatOpenAI } from "@langchain/openai";
-import { azureApiInstanceName, azureApiKey,  azureApiVersion, azureDeploymentName } from "../constants/app-constants";
-import { tools } from "./tools";
+import { azureApiInstanceName, azureApiKey,  azureApiVersion, azureDeploymentName } from "../constants/app-constants.js";
+import { tools } from "./tools/index.js";
 
 
 

@@ -2,9 +2,9 @@
 
 import { z } from "zod";
 import { tool } from "@langchain/core/tools";
-import { model } from "../model";
+import { model } from "../model.js";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { MARKDOWN_TOOL_PROMPT } from "../../prompts";
+import { MARKDOWN_TOOL_PROMPT } from "../../prompts/index.js";
 const essayGeneratorToolSchema = z.object({
    content : z.string().describe("The the raw information about the topic that needs to be converted into an essay"),
 });
