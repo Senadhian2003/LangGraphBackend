@@ -1,5 +1,5 @@
 
-import { AIMessage, SystemMessage } from "@langchain/core/messages";
+import { AIMessage, BaseMessage, SystemMessage } from "@langchain/core/messages";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
@@ -53,11 +53,26 @@ function shouldContinue({ messages }: typeof MessagesAnnotation.State) {
     return "__end__";
   }
 
+  const filterMessages = (messages: BaseMessage[]): BaseMessage[] => {
+    // This is very simple helper function which only ever uses the last message
+    return messages.slice(-10);
+  }
+
+
 // Define the function that calls the model
 async function callModel(state: typeof MessagesAnnotation.State) {
-  const systemMessage = new SystemMessage({ content: BASE_AGENT_PROMPT });
+  // Filter messages 
 
-  const messagesWithSystem = [systemMessage, ...state.messages];
+  console.log("State messages:", state.messages);
+
+  const filteredMessages = filterMessages(state.messages);
+
+  console.log("Filtered messages:", filteredMessages);
+  // Combine with system prompt
+  const systemMessage = new SystemMessage({ content: BASE_AGENT_PROMPT });
+  const messagesWithSystem = [systemMessage, ...filteredMessages];
+
+
 
   const response = await boundModel.invoke(messagesWithSystem);
 
