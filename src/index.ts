@@ -1,8 +1,9 @@
 import express, { Request, response, Response } from "express";
 import { langGraph } from "./lang-graph/app.js";
-import { HumanMessage } from "@langchain/core/messages";
+import { BaseMessage, HumanMessage } from "@langchain/core/messages";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { pool } from "./pg-sql/pg-connection.js";
+import {v4 as uuidv4} from "uuid";
 
 const app = express();
 
@@ -22,7 +23,10 @@ app.post("/chat", async (req: Request, res: Response) => {
   console.log("Received message:", query);
   console.log("Received threadId:", threadId);
   const config = { configurable: { thread_id: threadId } };
-  const message = new HumanMessage(query);
+  const message = new HumanMessage({
+    id: uuidv4(),
+    content: query,
+  });
  
   const response = await langGraph.invoke({ messages: [message] }, config);
   console.log("Response:", response.messages[response.messages.length - 1].content);
@@ -36,11 +40,11 @@ app.post("/chat/:threadId", async(req: Request, res: Response) => {
   const checkpointer = new PostgresSaver(pool);
   const config = { configurable: { thread_id: threadId } };
   // const messages = checkpointer.list(config)
-
-  const message =  await checkpointer.get(config);
   console.log(`Received thread ${threadId}`);
+  const messages =  await checkpointer.get(config);
 
-  console.log("Messages:", message);
+
+  console.log("Messages:", messages);
   
   // for await (const message of messages) {
   //   console.log(message);
@@ -48,7 +52,29 @@ app.post("/chat/:threadId", async(req: Request, res: Response) => {
 
 
   res.send({
-    response: message,
+    response: messages,
+  })
+});
+
+app.put("/chat/:threadId", async(req: Request, res: Response) => {
+  const { threadId } = req.params;
+  const {messageId} = req.body;
+  const config = { configurable: { thread_id: threadId } };
+  
+
+  let messages =  (await langGraph.getState(config)).values.messages;
+  console.log(`Received thread ${threadId}`);
+
+  console.log("Messages before update:", messages);
+  
+  const updatedMessage = messages?.find((message: BaseMessage) => message.id === messageId);
+  updatedMessage.content = "Updated message"
+  await langGraph.updateState(config, { messages: updatedMessage });
+  messages =  (await langGraph.getState(config)).values.messages;
+  console.log("Updated Messages:", messages);
+
+  res.send({
+    response: messages,
   })
 });
 
