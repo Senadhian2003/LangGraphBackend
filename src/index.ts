@@ -1,6 +1,6 @@
 import express, { Request, response, Response } from "express";
 import { langGraph } from "./lang-graph/app.js";
-import { BaseMessage, HumanMessage } from "@langchain/core/messages";
+import { BaseMessage, HumanMessage, filterMessages} from "@langchain/core/messages";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { pool } from "./pg-sql/pg-connection.js";
 import {v4 as uuidv4} from "uuid";
@@ -41,10 +41,18 @@ app.post("/chat/:threadId", async(req: Request, res: Response) => {
   const config = { configurable: { thread_id: threadId } };
   // const messages = checkpointer.list(config)
   console.log(`Received thread ${threadId}`);
-  const messages =  await checkpointer.get(config);
+  // const messages =  await checkpointer.get(config);
+  let messages =  (await langGraph.getState(config)).values.messages;
 
+  const filteredMesagesResponse = filterMessages(messages, {
+    includeTypes : ["human", "ai"],
+  })
+
+  const filteredMesagesWithAiResponseResponse = filteredMesagesResponse.filter((message: BaseMessage) => !!message.content );
 
   console.log("Messages:", messages);
+
+  console.log("Filtered Messages:", filteredMesagesResponse);
   
   // for await (const message of messages) {
   //   console.log(message);
@@ -52,7 +60,7 @@ app.post("/chat/:threadId", async(req: Request, res: Response) => {
 
 
   res.send({
-    response: messages,
+    response: filteredMesagesWithAiResponseResponse,
   })
 });
 
