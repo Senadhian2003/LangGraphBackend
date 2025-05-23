@@ -1,6 +1,6 @@
 import express, { Request, response, Response } from "express";
 import { langGraph } from "./lang-graph/app.js";
-import { BaseMessage, HumanMessage, filterMessages} from "@langchain/core/messages";
+import { BaseMessage, HumanMessage, RemoveMessage, filterMessages} from "@langchain/core/messages";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { pool } from "./pg-sql/pg-connection.js";
 import {v4 as uuidv4} from "uuid";
@@ -66,14 +66,48 @@ app.post("/chat/:threadId", async(req: Request, res: Response) => {
 
 app.put("/chat/:threadId", async(req: Request, res: Response) => {
   const { threadId } = req.params;
+  console.log(`Received thread ${threadId}`);
   const {messageId, updateQuery} = req.body;
+  console.log(`Received messageId: ${messageId}\n Received updateQuery: ${updateQuery}`);
   const config = { configurable: { thread_id: threadId } };
   
 
   let messages =  (await langGraph.getState(config)).values.messages;
-  console.log(`Received thread ${threadId}`);
-
   console.log("Messages before update:", messages);
+  const targetMessageIndex = messages.findIndex((msg: BaseMessage) => msg.id === messageId);
+  if (targetMessageIndex === -1) {
+     res.status(404).json({ error: "Message not found" });
+  }
+   
+  const targetMessage = messages[targetMessageIndex];
+  const messagesToDelete = messages.slice(targetMessageIndex + 1);
+    
+    console.log(`Found target message at index ${targetMessageIndex}`);
+    console.log(`Will delete ${messagesToDelete.length} messages after it`);
+
+    // Delete all messages that come after the target message
+    for (const msgToDelete of messagesToDelete) {
+      await langGraph.updateState(config, { 
+        messages: new RemoveMessage({ id: msgToDelete.id }) 
+      });
+    }
+
+    // Now delete the target message itself (we'll replace it with updated version)
+
+    const humanMessage : BaseMessage = new HumanMessage({
+      id: messageId,
+      content: updateQuery,
+    })
+
+    await langGraph.updateState(config, { 
+      messages: [humanMessage] 
+    });
+
+    const response =  await langGraph.invoke({}, config);
+
+     // Create the updated message
+   
+
 
   // const updatedMessage = messages?.find((message: BaseMessage) => message.id === messageId);
   // updatedMessage.content = "Updated message"
@@ -82,22 +116,9 @@ app.put("/chat/:threadId", async(req: Request, res: Response) => {
   // console.log("Updated Messages:", messages);
 
   
-  const messageIndex = messages.findIndex((m: BaseMessage) => m.id === messageId);
-
-  // Update the content of that message
-  messages[messageIndex].content = updateQuery;
-
-  // Truncate all messages after the edited one (like a time travel)
-  const truncatedMessages = messages.slice(0, messageIndex + 1);
-  console.log("Messages after truncate:", truncatedMessages);
-  // Set the state to this truncated + updated version
-  await langGraph.updateState(config, { messages: [...truncatedMessages] });
-  let updatedState =  (await langGraph.getState(config)).values.messages;
-  console.log("Updated state:", updatedState);
-  // Now re-run the graph from this point
-  // const result = await langGraph.invoke({},config);
+  
   res.send({
-    response: updatedState,
+    response: response,
   })
 });
 
